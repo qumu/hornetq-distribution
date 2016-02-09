@@ -1,0 +1,165 @@
+
+// Log timings per task.
+class TimingsListener implements TaskExecutionListener, BuildListener {
+    private Clock clock
+    private timings = []
+
+    @Override
+    void beforeExecute(Task task) {
+        clock = new org.gradle.util.Clock()
+    }
+
+    @Override
+    void afterExecute(Task task, TaskState taskState) {
+        def ms = clock.timeInMs
+        timings.add([ms, task.path])
+    }
+
+    @Override
+    void buildFinished(BuildResult result) {
+        println "\n Timings per task:"
+        for (timing in timings) {
+            if (timing[0] >= 50) {
+                printf "%7sms  %s\n", timing
+            }
+        }
+    }
+
+    @Override
+    void buildStarted(Gradle gradle) {}
+
+    @Override
+    void projectsEvaluated(Gradle gradle) {}
+
+    @Override
+    void projectsLoaded(Gradle gradle) {}
+
+    @Override
+    void settingsEvaluated(Settings settings) {}
+}
+
+gradle.addListener new TimingsListener()
+
+
+task startupMessage {
+println """\
+===============================================================================================================================
+Hornetq Build Script
+
+================================================================================================================================
+"""
+}
+
+apply plugin: 'groovy'
+apply plugin: 'java'
+apply plugin: 'base'
+
+// Dependencies, repositories and custom configurations definitions are in a separate file
+apply from: 'hornetq.gradle'
+
+
+
+// ==== Global properties ====
+
+ext.reportsDirName = "reports"
+
+// Property inherited from java plugin
+testResultsDirName = "$reportsDirName/junit"
+
+ext.baseDir = file("$rootProject.projectDir")
+ext.frameworkBuildDir = file("$buildDir/framework")
+ext.srcDir = file("$baseDir/src/main/java")
+ext.resourceDir = "$baseDir/resources"
+ext.distDir = file("$baseDir/deploy/dist")
+ext.componentsDir = "$baseDir/components"
+ext.hornetqBuildDir = "$frameworkBuildDir/hornetq"
+
+file("$distDir").mkdirs()
+
+sourceSets {
+
+  test {
+    java {
+      srcDirs = ['src/test/java/unit', 'src/test/java/integration', 'src/test/java/example']
+    }
+
+    resources {
+       srcDirs = ['src/test/resources']
+    }
+  }
+
+  main {
+    java {
+      srcDir 'src/main/java'
+    }
+    resources {
+      srcDir 'src/main/resources'
+    }
+  }
+
+}
+
+
+// ================== Build Process ==================
+
+task createDirs {
+	doLast {
+    println "Creating necessary directories..."
+    buildDir.mkdirs()
+  }
+}
+
+task clean (type: Delete, overwrite: true) {
+
+   doFirst {
+     println "Cleaning files..."
+   }
+
+   delete file("$buildDir")
+}
+
+task buildHornetQ(type: Tar) {
+
+    doFirst {
+        delete fileTree(dir: hornetqBuildDir)
+        file("$hornetqBuildDir/lib").mkdirs()
+    }
+
+    doLast {
+       println "HornetQ TAR file created in $distDir/$archiveName"
+    }
+
+    archiveName = 'hornetq.tar'
+    destinationDir = distDir
+
+    from ("bin") {
+        include '**/*.sh'
+        fileMode 0755
+    }
+
+    from ("conf") {
+        into 'conf'
+    }
+
+    from (configurations.messageBroker) {
+        into 'lib'
+    }
+
+}
+
+
+// Generate wrapper files (gradlew, gradlew.bat)
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.2.1'
+}
+
+def processFileInPlace(file, Closure processText) {
+    def text = file.text
+    file.write(processText(text))
+}
+
+def setDefaultProperty(key, defaultValue) {
+  if (!project.ext.getProperties().containsKey(key)) {
+    project.ext.setProperty(key, defaultValue)
+  }
+}

@@ -1,0 +1,72 @@
+repositories {
+    maven {
+        url 'https://repository.jboss.org/nexus/content/repositories/public-jboss'
+    }
+
+}
+
+configurations {
+    messageBroker
+}
+
+configurations.all {
+    exclude module: 'jbossjts-jacorb'
+    exclude group: 'org.jgroups', module: 'jgroups'
+    exclude group: 'org.jboss', module: 'jboss-transaction-spi'
+    exclude group: 'org.hornetq', module: 'hornetq-jboss-as-integration'
+    exclude group: 'org.apache.struts'
+    exclude group: 'oro'
+    exclude group: 'sslext'
+    exclude group: 'javax.inject'
+    exclude group: 'javax.annotation'
+    exclude group: 'net.java.dev.jna'
+    exclude module: 'xz'
+}
+
+dependencies {
+
+
+    // Message broker
+    def hornetqVersion = "2.4.5.Final"
+    def nettyVersion = "4.0.13.Final"
+    def jbossMicroContainerKernelVersion = "2.2.0.M2"
+
+    // Logging
+    def log4jVersion = "2.0.2"
+    def jbossLoggingVersion = "3.1.4.GA"
+    def slf4jVersion = "1.7.7"
+    def log4jHornetqVersion = "1.2.17"
+
+    def messageBrokerArtifacts = [
+            "org.hornetq:hornetq-server:$hornetqVersion",
+            "org.hornetq:hornetq-jms-server:$hornetqVersion",
+            "org.hornetq:hornetq-jms-client:$hornetqVersion",
+            "org.hornetq:hornetq-bootstrap:$hornetqVersion",
+            "org.hornetq:hornetq-commons:$hornetqVersion",
+            "org.hornetq:hornetq-core-client:$hornetqVersion",
+            "org.hornetq:hornetq-service-sar:$hornetqVersion",
+            "org.hornetq:hornetq-stomp-protocol:$hornetqVersion",
+            "org.hornetq:hornetq-native:$hornetqVersion",
+            "io.netty:netty-all:$nettyVersion"
+    ]
+
+    // Message Broker - HornetQ
+    compile "org.jboss.logging:jboss-logging:$jbossLoggingVersion"
+    compile "org.hornetq:hornetq-spring-integration:$hornetqVersion"
+    messageBrokerArtifacts.each { artifact ->
+        compile "$artifact", {
+            exclude group: 'org.jboss.microcontainer'
+            exclude group: 'org.jboss.spec'
+            exclude group: 'javax.inject'
+            exclude group: 'org.jboss.naming'
+            exclude group: 'org.jboss.spec.javax.jms'
+            exclude group: 'org.jboss.spec.javax.transaction'
+        }
+        messageBroker "$artifact"
+    }
+    messageBroker "log4j:log4j:$log4jHornetqVersion"
+    messageBroker 'org.jboss.microcontainer:jboss-kernel:$jbossMicroContainerKernelVersion', {
+        exclude module: 'jboss-logging-spi'
+    }
+
+}

@@ -1,0 +1,101 @@
+<configuration xmlns="urn:hornetq"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:schemaLocation="urn:hornetq /schema/hornetq-configuration.xsd">
+
+	<!-- Has a (minor) impact on performance, but we can still get 1500+ msgs/sec, so worth leaving on. -->
+   <message-counter-enabled>true</message-counter-enabled>
+
+   <backup>false</backup>
+
+   <clustered>false</clustered>
+
+   <jmx-management-enabled>true</jmx-management-enabled>
+
+   <!-- Setting this to true will allow the live server take over from the backup
+        when the live server comes back up -->
+   <allow-failback>true</allow-failback>
+
+   <persistence-enabled>true</persistence-enabled>
+   <failover-on-shutdown>true</failover-on-shutdown>
+
+   <!-- The live and backup server must have a shared store -->
+   <shared-store>false</shared-store>
+   <large-messages-directory>large-messages</large-messages-directory>
+   <bindings-directory>message-broker-data/bindings</bindings-directory>
+   <journal-directory>journal</journal-directory>
+   <paging-directory>paging</paging-directory>
+
+   <connectors>
+      <connector name="netty">
+         <factory-class>org.hornetq.core.remoting.impl.netty.NettyConnectorFactory</factory-class>
+         <param key="host" value="localhost"/>
+         <param key="port" value="5445"/>
+      </connector>
+
+      <!-- Connector to this server’s backup. This is needed for failback to work properly in a static cluster -->
+      <connector name="netty-backup">
+         <factory-class>org.hornetq.core.remoting.impl.netty.NettyConnectorFactory</factory-class>
+         <param key="host"  value=""/>
+         <param key="port" value="5445"/>
+      </connector>
+
+   </connectors>
+
+   <acceptors>
+      <acceptor name="netty">
+         <factory-class>org.hornetq.core.remoting.impl.netty.NettyAcceptorFactory</factory-class>
+         <param key="host" value="0.0.0.0"/>
+         <param key="port" value="5445"/>
+      </acceptor>
+	  <acceptor name="stomp-acceptor">
+	  	<factory-class>org.hornetq.core.remoting.impl.netty.NettyAcceptorFactory</factory-class>
+	  	<param key="protocols" value="STOMP"/>
+        <param key="host" value="0.0.0.0"/>
+	  	<param key="port" value="61613"/>
+	  </acceptor>
+   </acceptors>
+
+   <!-- Clustering configuration -->
+   <cluster-connections>
+      <cluster-connection name="my-cluster">
+         <address>jms</address>
+         <connector-ref>netty</connector-ref>
+         <retry-interval>5000</retry-interval>
+         <use-duplicate-detection>true</use-duplicate-detection>
+
+         <forward-when-no-consumers>false</forward-when-no-consumers>
+         <max-hops>1</max-hops>
+         <static-connectors>
+            <!-- Without this the connection factory won’t be able to reconnect on failback -->
+            <connector-ref>netty-backup</connector-ref>
+         </static-connectors>
+	</cluster-connection>
+   </cluster-connections>
+
+   <security-settings>
+      <security-setting match="#">
+         <permission type="createNonDurableQueue" roles="guest"/>
+         <permission type="deleteNonDurableQueue" roles="guest"/>
+         <permission type="consume" roles="guest"/>
+         <permission type="send" roles="guest"/>
+         <permission type="createDurableQueue" roles="guest"/>
+      </security-setting>
+   </security-settings>
+
+	<address-settings>
+		<!--default catch all -->
+		<address-setting match="#">
+			<dead-letter-address>jms.queue.DLQ</dead-letter-address>
+			<expiry-address>jms.queue.ExpiryQueue</expiry-address>
+			<redelivery-delay>0</redelivery-delay>
+        	<max-size-bytes>104857600</max-size-bytes>
+         	<page-size-bytes>10485760</page-size-bytes>
+         	<address-full-policy>PAGE</address-full-policy>
+			<message-counter-history-day-limit>10</message-counter-history-day-limit>
+			<!--This is in milliseconds. Note that you can set different redistribution-delay
+				settings for different queues -->
+			<redistribution-delay>0</redistribution-delay>
+		</address-setting>
+	</address-settings>
+
+</configuration>
