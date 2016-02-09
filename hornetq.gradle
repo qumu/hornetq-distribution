@@ -6,7 +6,7 @@ repositories {
 }
 
 configurations {
-    messageBroker
+    hornetq
 }
 
 configurations.all {
@@ -23,11 +23,15 @@ configurations.all {
     exclude module: 'xz'
 }
 
+ext {
+  hornetqVersion = "2.4.5.Final"
+}
+
 dependencies {
 
 
     // Message broker
-    def hornetqVersion = "2.4.5.Final"
+    def hornetqVersion = hornetqVersion
     def nettyVersion = "4.0.13.Final"
     def jbossMicroContainerKernelVersion = "2.2.0.M2"
 
@@ -37,7 +41,7 @@ dependencies {
     def slf4jVersion = "1.7.7"
     def log4jHornetqVersion = "1.2.17"
 
-    def messageBrokerArtifacts = [
+    def hornetqArtifacts = [
             "org.hornetq:hornetq-server:$hornetqVersion",
             "org.hornetq:hornetq-jms-server:$hornetqVersion",
             "org.hornetq:hornetq-jms-client:$hornetqVersion",
@@ -53,7 +57,7 @@ dependencies {
     // Message Broker - HornetQ
     compile "org.jboss.logging:jboss-logging:$jbossLoggingVersion"
     compile "org.hornetq:hornetq-spring-integration:$hornetqVersion"
-    messageBrokerArtifacts.each { artifact ->
+    hornetqArtifacts.each { artifact ->
         compile "$artifact", {
             exclude group: 'org.jboss.microcontainer'
             exclude group: 'org.jboss.spec'
@@ -62,10 +66,10 @@ dependencies {
             exclude group: 'org.jboss.spec.javax.jms'
             exclude group: 'org.jboss.spec.javax.transaction'
         }
-        messageBroker "$artifact"
+        hornetq "$artifact"
     }
-    messageBroker "log4j:log4j:$log4jHornetqVersion"
-    messageBroker 'org.jboss.microcontainer:jboss-kernel:$jbossMicroContainerKernelVersion', {
+    hornetq "log4j:log4j:$log4jHornetqVersion"
+    hornetq 'org.jboss.microcontainer:jboss-kernel:$jbossMicroContainerKernelVersion', {
         exclude module: 'jboss-logging-spi'
     }
 

@@ -123,13 +123,14 @@ task buildHornetQ(type: Tar) {
     doFirst {
         delete fileTree(dir: hornetqBuildDir)
         file("$hornetqBuildDir/lib").mkdirs()
+        println "Building HornetQ version $hornetqVersion"
     }
 
     doLast {
        println "HornetQ TAR file created in $distDir/$archiveName"
     }
 
-    archiveName = 'hornetq.tar'
+    archiveName = "HornetQ-${hornetqVersion}.tar"
     destinationDir = distDir
 
     from ("bin") {
@@ -141,7 +142,7 @@ task buildHornetQ(type: Tar) {
         into 'conf'
     }
 
-    from (configurations.messageBroker) {
+    from (configurations.hornetq) {
         into 'lib'
     }
 
